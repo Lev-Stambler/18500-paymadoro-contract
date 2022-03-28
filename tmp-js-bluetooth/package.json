@@ -1,0 +1,12 @@
+{
+  "devDependencies": {
+    "typescript": "^4.6.3"
+  },
+  "version": "10",
+  "scripts": {
+    "start": "npx tsc -p tsconfig.json && node dist/main.js"
+  },
+  "dependencies": {
+    "bluetooth-serial-port": "^2.2.7"
+  }
+}

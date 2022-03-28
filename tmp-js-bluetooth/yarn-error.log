@@ -1,0 +1,33 @@
+Arguments: 
+  /usr/local/bin/node /home/lev/.npm-global/bin/yarn add bluetooth-serial-port
+
+PATH: 
+  /home/lev/Desktop/matlab:/usr/bin/latex:/home/lev/.npm-global/bin:/home/lev/Software/bin:/home/lev/.local/share/solana/install/active_release/bin:/home/lev/Desktop/matlab:/usr/bin/latex:/home/lev/google-cloud-sdk/bin:/home/lev/.npm-global/bin:/home/lev/Software/bin:/home/lev/.local/share/solana/install/active_release/bin:/home/lev/.local/share/solana/install/active_release/bin:/home/lev/.cargo/bin:/home/lev/.local/bin:/home/lev/bin:/opt/texbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin:/usr/local/go/bin:/home/lev/code/parallel/bin:/home/lev://home/lev/go/bin:/home/lev/go/bin:/home/lev/bin:/usr/local/go/bin:/home/lev/code/parallel/bin:/home/lev://home/lev/go/bin:/home/lev/go/bin:/home/lev/bin
+
+Yarn version: 
+  1.22.17
+
+Node version: 
+  17.3.0
+
+Platform: 
+  linux x64
+
+Trace: 
+  Error: EACCES: permission denied, unlink '/home/lev/code/18500/paymadoro-contract/tmp-js-bluetooth/node_modules/.bin/tsc'
+
+npm manifest: 
+  {
+    "devDependencies": {
+      "typescript": "^4.6.3"
+    },
+    "scripts": {
+      "run": "npx tsc src/main.ts && dist/main.js"
+    }
+  }
+
+yarn manifest: 
+  No manifest
+
+Lockfile: 
+  No lockfile
