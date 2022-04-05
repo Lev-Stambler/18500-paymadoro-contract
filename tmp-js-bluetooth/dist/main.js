@@ -74,7 +74,6 @@ const callBackData = (data) => __awaiter(void 0, void 0, void 0, function* () {
 });
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
-        console.log("AAA");
         const btConn = yield connect(callBackData);
         console.log("Connected");
         btConn.write(Buffer.from("From Node With Love\n"), errFunction);

@@ -52,18 +52,12 @@ const callBackData = async (data: string) => {
 };
 
 async function main() {
-	 console.log("AAA")
   const btConn = await connect(callBackData);
   console.log("Connected");
   btConn.write(Buffer.from("From Node With Love\n"), errFunction);
 }
 
 main();
-
-// Are you not entertained?
-
-/*
-  For this to work you will have to connect to the Bluetooth device on your computer in the normal way
-  I.e via Bluetooth settings: Default password is usually 0000 or 1234
-*/
-// Starts looking for Bluetooth devices and calls the function btSerial.on('found'
+// Tmrw
+// get all data and log as CSV
+// have Electron launch the process
