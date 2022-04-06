@@ -7,6 +7,9 @@
     "start": "npx tsc -p tsconfig.json && n use 10 dist/main.js"
   },
   "dependencies": {
-    "bluetooth-serial-port": "^2.2.7"
+    "@adrianhurt/mic-volume-meter": "^0.1.1",
+    "bluetooth-serial-port": "^2.2.7",
+    "csv-append": "^1.0.0",
+    "node-microphone": "^0.1.5"
   }
 }

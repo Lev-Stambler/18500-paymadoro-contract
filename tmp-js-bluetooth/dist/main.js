@@ -31,9 +31,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 // The following code is inspired by https://create.arduino.cc/projecthub/leevinentwilson/bluetooth-node-and-arduino-de822e
+const csv_append_1 = __importDefault(require("csv-append"));
 const BTSerialPort = __importStar(require("bluetooth-serial-port"));
+const CSV_PATH = "./data.csv";
+const { append, end } = (0, csv_append_1.default)(CSV_PATH);
 const btSerial = new BTSerialPort.BluetoothSerialPort();
 const errFunction = (err) => {
     if (err) {
@@ -71,19 +77,29 @@ const connect = (dataCb) => {
 };
 const callBackData = (data) => __awaiter(void 0, void 0, void 0, function* () {
     console.log("received", data);
+    const [acceleration, hr] = data.split("\n")[0].split(",");
+    const time = Date.now();
+    append({
+        time,
+        acceleration,
+        hr,
+    });
+    // await end();
 });
+function connectMic() {
+    return __awaiter(this, void 0, void 0, function* () {
+    });
+}
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
+        yield connectMic();
         const btConn = yield connect(callBackData);
         console.log("Connected");
         btConn.write(Buffer.from("From Node With Love\n"), errFunction);
     });
 }
 main();
-// Are you not entertained?
-/*
-  For this to work you will have to connect to the Bluetooth device on your computer in the normal way
-  I.e via Bluetooth settings: Default password is usually 0000 or 1234
-*/
-// Starts looking for Bluetooth devices and calls the function btSerial.on('found'
+// Tmrw
+// get all data and log as CSV
+// have Electron launch the process
 //# sourceMappingURL=main.js.map

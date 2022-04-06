@@ -1,5 +1,11 @@
 // The following code is inspired by https://create.arduino.cc/projecthub/leevinentwilson/bluetooth-node-and-arduino-de822e
+import csvAppend from "csv-append";
+
 import * as BTSerialPort from "bluetooth-serial-port";
+
+const CSV_PATH = "./data.csv";
+const { append, end } = csvAppend(CSV_PATH);
+
 const btSerial = new BTSerialPort.BluetoothSerialPort();
 
 const errFunction = (err) => {
@@ -49,9 +55,23 @@ const connect = (
 
 const callBackData = async (data: string) => {
   console.log("received", data);
+  const [acceleration, hr] = data.split("\n")[0].split(",");
+  const time = Date.now();
+
+  append({
+    time,
+    acceleration,
+    hr: hr.replace("e", ''),
+  });
+  // await end();
 };
 
+
+async function connectMic() {
+}
+
 async function main() {
+  await connectMic()
   const btConn = await connect(callBackData);
   console.log("Connected");
   btConn.write(Buffer.from("From Node With Love\n"), errFunction);
