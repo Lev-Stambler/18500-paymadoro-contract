@@ -37,7 +37,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 // The following code is inspired by https://create.arduino.cc/projecthub/leevinentwilson/bluetooth-node-and-arduino-de822e
 const csv_append_1 = __importDefault(require("csv-append"));
+const stream_1 = require("stream");
+const node_microphone_1 = __importDefault(require("node-microphone"));
 const BTSerialPort = __importStar(require("bluetooth-serial-port"));
+const mic_1 = require("./mic");
+let mic = new node_microphone_1.default();
+let micStream = new stream_1.Writable();
+micStream.on("data", (chunk) => console.log("GOT CHUNK", chunk));
 const CSV_PATH = "./data.csv";
 const { append, end } = (0, csv_append_1.default)(CSV_PATH);
 const btSerial = new BTSerialPort.BluetoothSerialPort();
@@ -53,7 +59,7 @@ const connect = (dataCb) => {
         btSerial.on("found", (address, name) => __awaiter(void 0, void 0, void 0, function* () {
             // If a device is found and the name contains 'HC' we will continue
             // This is so that it doesn't try to send data to all your other connected BT devices
-            if (name.toLowerCase().includes("hc")) {
+            if (name === "HC-05") {
                 console.log("Found BT module with name", name, "and address", address);
                 btSerial.findSerialPortChannel(address, (channel) => {
                     console.log("Found channel:", channel);
@@ -77,22 +83,41 @@ const connect = (dataCb) => {
 };
 const callBackData = (data) => __awaiter(void 0, void 0, void 0, function* () {
     console.log("received", data);
-    const [acceleration, hr] = data.split("\n")[0].split(",");
-    const time = Date.now();
-    append({
-        time,
-        acceleration,
-        hr,
-    });
+    if (data.split(",").length >= 2) {
+        const [acceleration, hr] = data.split("\n")[0].split(",");
+        const time = Date.now();
+        append({
+            time,
+            acceleration,
+            hr: hr.replace("e", ""),
+        });
+    }
     // await end();
 });
 function connectMic() {
     return __awaiter(this, void 0, void 0, function* () {
+        let micStream = mic.startRecording();
+        micStream.pipe(micStream);
+        setTimeout(() => {
+            console.info("stopped recording");
+            mic.stopRecording();
+        }, 10000);
+        mic.on("info", (info) => {
+            console.log(info);
+        });
+        mic.on("error", (error) => {
+            console.log(error);
+        });
     });
 }
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
-        yield connectMic();
+        (0, mic_1.startRecord)((level) => {
+            console.log("level: " + level);
+            const db = 20 * Math.log10(level / 100);
+            console.log("db", db);
+        });
+        // await connectMic();
         const btConn = yield connect(callBackData);
         console.log("Connected");
         btConn.write(Buffer.from("From Node With Love\n"), errFunction);

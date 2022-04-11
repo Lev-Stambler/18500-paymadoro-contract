@@ -1,7 +1,16 @@
 // The following code is inspired by https://create.arduino.cc/projecthub/leevinentwilson/bluetooth-node-and-arduino-de822e
 import csvAppend from "csv-append";
-
+import { Writable } from "stream";
+import Mic from "node-microphone";
 import * as BTSerialPort from "bluetooth-serial-port";
+import { startRecord } from "./mic";
+
+let mic = new Mic();
+
+let micStream = new Writable();
+let mostRecentDb = 0
+
+micStream.on("data", (chunk) => console.log("GOT CHUNK", chunk));
 
 const CSV_PATH = "./data.csv";
 const { append, end } = csvAppend(CSV_PATH);
@@ -23,7 +32,7 @@ const connect = (
     btSerial.on("found", async (address, name) => {
       // If a device is found and the name contains 'HC' we will continue
       // This is so that it doesn't try to send data to all your other connected BT devices
-      if (name.toLowerCase().includes("hc")) {
+      if (name === "HC-05") {
         console.log("Found BT module with name", name, "and address", address);
         btSerial.findSerialPortChannel(
           address,
@@ -55,23 +64,26 @@ const connect = (
 
 const callBackData = async (data: string) => {
   console.log("received", data);
-  const [acceleration, hr] = data.split("\n")[0].split(",");
-  const time = Date.now();
+  if (data.split(",").length >= 2) {
+    const [acceleration, hr] = data.split("\n")[0].split(",");
+    const time = Date.now();
 
-  append({
-    time,
-    acceleration,
-    hr: hr.replace("e", ''),
-  });
+    append({
+      time,
+      acceleration,
+      hr: hr.replace("e", ""),
+      soundDB: mostRecentDb
+    });
+  }
   // await end();
 };
 
-
-async function connectMic() {
-}
-
 async function main() {
-  await connectMic()
+  startRecord((level) => {
+		const db = 20 * Math.log10(level / 100)
+    mostRecentDb = db
+  });
+  // await connectMic();
   const btConn = await connect(callBackData);
   console.log("Connected");
   btConn.write(Buffer.from("From Node With Love\n"), errFunction);
