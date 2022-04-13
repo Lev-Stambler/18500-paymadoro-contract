@@ -5,9 +5,10 @@ authors = ["Lev Stambler"]
 edition = "2018"
 
 [dependencies]
-near-sdk = "3.1.0"
-near-sdk-sim = "3.2.0"
-near-contract-standards = "3.1.1"
+near-sdk-sim = "4.0.0-pre.7"
+
+near-sdk = "4.0.0-pre.7"
+near-contract-standards = "4.0.0-pre.7"
 
 # remember to include a line for each contract
 contract = { path = "./contract" }

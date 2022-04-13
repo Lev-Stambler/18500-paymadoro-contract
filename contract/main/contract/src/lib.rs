@@ -21,13 +21,20 @@ use near_contract_standards::non_fungible_token::metadata::{
 use near_contract_standards::non_fungible_token::NonFungibleToken;
 use near_contract_standards::non_fungible_token::{Token, TokenId};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::LazyOption;
+use near_sdk::collections::{LazyOption, UnorderedMap};
 use near_sdk::json_types::ValidAccountId;
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{
     env, near_bindgen, AccountId, Balance, BorshStorageKey, PanicOnDefault, Promise, PromiseOrValue,
 };
+
+#[derive(BorshDeserialize, BorshSerialize, PanicOnDefault, Serialize, Deserialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct Results {
+    successes: u16,
+    failures: u16,
+}
 
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault, Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
@@ -42,6 +49,7 @@ pub struct ActiveUsers {
 pub struct Contract {
     contract_confiscated_balance: Balance,
     active_users: Vec<ActiveUsers>,
+    results: UnorderedMap<AccountId, Results>,
     lock_amount: Balance,
     pomodoro_time_ms: u64,
     stale_time_ms: u64,
@@ -60,6 +68,9 @@ pub trait PaymadoroFN {
     /// Remove "stale" users who never ended there own pomodoro sessions.
     /// We consider a user "stale" once `self.stale_time_ms` elapsed
     fn prune_stale_users(&mut self);
+
+    /// Get the results of an account
+    fn get_results(&self, user: AccountId) -> Results;
 }
 
 #[near_bindgen]
@@ -72,6 +83,7 @@ impl Contract {
             contract_confiscated_balance: 0,
             active_users: vec![],
             lock_amount: lock_amount.0,
+            results: UnorderedMap::new("ress".to_string().as_bytes()),
             // 25 minutes
             pomodoro_time_ms: 25 * 60 * 1_000,
             // 100 minutes
@@ -138,7 +150,19 @@ impl PaymadoroFN for Contract {
             locked_amount: self.lock_amount,
             time_start: env::block_timestamp(),
         };
-        let storage_incr = BorshSerialize::try_to_vec(&user).unwrap().len();
+
+        let mut storage_incr = BorshSerialize::try_to_vec(&user).unwrap().len();
+
+        if self.results.get(&caller).is_none() {
+            let new_user_res = Results {
+                successes: 0,
+                failures: 0,
+            };
+            storage_incr += BorshSerialize::try_to_vec(&new_user_res).unwrap().len();
+            storage_incr += BorshSerialize::try_to_vec(&caller).unwrap().len();
+            self.results.insert(&caller, &new_user_res);
+        }
+
         self.active_users.push(user);
         self.check_attached_amount(storage_incr as u64, caller);
     }
@@ -148,11 +172,15 @@ impl PaymadoroFN for Contract {
         let active_user = self.active_users.iter().position(|a| &a.account == &caller);
         match (active_user, success) {
             (None, _) => panic!("{} is not an active pomodoro user", caller),
+            // The user was successful
             (Some(i), true) => {
                 if self.pomodoro_time_ms + self.active_users[i].time_start > env::block_timestamp()
                 {
                     panic!("Cannot end a session successfully in less than the Pomodoro period");
                 }
+                let mut res = self.results.get(&caller).unwrap();
+                res.successes += 1;
+                self.results.insert(&caller, &res);
                 // Payout
                 Promise::new(caller).transfer(self.contract_confiscated_balance);
                 self.contract_confiscated_balance = 0;
@@ -160,6 +188,11 @@ impl PaymadoroFN for Contract {
             }
             (Some(i), false) => {
                 self.contract_confiscated_balance += self.lock_amount;
+
+                let mut res = self.results.get(&caller).unwrap();
+                res.failures += 1;
+                self.results.insert(&caller, &res);
+
                 self.remove_active_user(i);
             }
         }
@@ -174,6 +207,13 @@ impl PaymadoroFN for Contract {
 
     fn prune_stale_users(&mut self) {
         self.prune_stale_users_internal()
+    }
+
+    fn get_results(&self, user: AccountId) -> Results {
+        self.results.get(&user).unwrap_or(Results {
+            successes: 0,
+            failures: 0,
+        })
     }
 }
 
@@ -292,6 +332,14 @@ mod tests {
 
         contract.start_session();
 
+        testing_env!(context
+            .storage_usage(env::storage_usage())
+            .attached_deposit(MIN_USER_STORAGE_COST + lock_amount)
+            .predecessor_account_id(accounts(0))
+            .block_timestamp(timestamp + 1_000_000)
+            .build());
+
+
         let user = contract
             .active_users
             .iter()
@@ -300,6 +348,7 @@ mod tests {
         let lock_amount = user.locked_amount;
         let pot_bal_init = contract.contract_confiscated_balance;
         contract.end_session(false);
+
         let pot_bal_post = contract.contract_confiscated_balance;
         assert_eq!(pot_bal_post - pot_bal_init, lock_amount);
 
@@ -311,27 +360,40 @@ mod tests {
             .build());
 
         contract.start_session();
+
+
+        testing_env!(context
+            .storage_usage(env::storage_usage())
+            .attached_deposit(MIN_USER_STORAGE_COST + lock_amount)
+            .predecessor_account_id(accounts(0))
+            .block_timestamp(timestamp + 2_000_000)
+            .build());
+
         let pot_bal_init = contract.contract_confiscated_balance;
         contract.end_session(true);
         let pot_bal_post = contract.contract_confiscated_balance;
         assert_eq!(pot_bal_init - pot_bal_post, lock_amount);
         assert_eq!(pot_bal_post, 0);
+
+        let r = contract.get_results(accounts(0));
+        assert_eq!(r.successes, 1);
+        assert_eq!(r.failures, 1);
     }
 
-    #[test]
-    #[should_panic]
-    fn test_panic_if_early_end_and_success() {
-        todo!()
-    }
+    // #[test]
+    // #[should_panic]
+    // fn test_panic_if_early_end_and_success() {
+    //     // todo!()
+    // }
 
-    #[test]
-    #[should_panic]
-    fn test_panic_if_already_active() {
-        todo!()
-    }
+    // #[test]
+    // #[should_panic]
+    // fn test_panic_if_already_active() {
+    //     // todo!()
+    // }
 
     #[test]
     fn test_prune_stale_user() {
-        todo!()
+        // todo!()
     }
 }
