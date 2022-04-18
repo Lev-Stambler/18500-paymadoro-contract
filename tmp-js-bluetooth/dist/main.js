@@ -43,6 +43,7 @@ const BTSerialPort = __importStar(require("bluetooth-serial-port"));
 const mic_1 = require("./mic");
 let mic = new node_microphone_1.default();
 let micStream = new stream_1.Writable();
+let mostRecentDb = 0;
 micStream.on("data", (chunk) => console.log("GOT CHUNK", chunk));
 const CSV_PATH = "./data.csv";
 const { append, end } = (0, csv_append_1.default)(CSV_PATH);
@@ -59,7 +60,7 @@ const connect = (dataCb) => {
         btSerial.on("found", (address, name) => __awaiter(void 0, void 0, void 0, function* () {
             // If a device is found and the name contains 'HC' we will continue
             // This is so that it doesn't try to send data to all your other connected BT devices
-            if (name === "HC-05") {
+            if (name === "HC-05" || name === "00:21:09:01:35:D7") {
                 console.log("Found BT module with name", name, "and address", address);
                 btSerial.findSerialPortChannel(address, (channel) => {
                     console.log("Found channel:", channel);
@@ -84,38 +85,25 @@ const connect = (dataCb) => {
 const callBackData = (data) => __awaiter(void 0, void 0, void 0, function* () {
     console.log("received", data);
     if (data.split(",").length >= 2) {
-        const [acceleration, hr] = data.split("\n")[0].split(",");
+        const [aX, aY, aZ, hr] = data.split("\n")[0].split(",");
         const time = Date.now();
+        console.log("AAAAA", hr);
         append({
             time,
-            acceleration,
-            hr: hr.replace("e", ""),
+            aX,
+            aY,
+            aZ,
+            hr: parseInt(hr.replace("e", "")),
+            soundDB: mostRecentDb,
         });
     }
     // await end();
 });
-function connectMic() {
-    return __awaiter(this, void 0, void 0, function* () {
-        let micStream = mic.startRecording();
-        micStream.pipe(micStream);
-        setTimeout(() => {
-            console.info("stopped recording");
-            mic.stopRecording();
-        }, 10000);
-        mic.on("info", (info) => {
-            console.log(info);
-        });
-        mic.on("error", (error) => {
-            console.log(error);
-        });
-    });
-}
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
         (0, mic_1.startRecord)((level) => {
-            console.log("level: " + level);
             const db = 20 * Math.log10(level / 100);
-            console.log("db", db);
+            mostRecentDb = db;
         });
         // await connectMic();
         const btConn = yield connect(callBackData);

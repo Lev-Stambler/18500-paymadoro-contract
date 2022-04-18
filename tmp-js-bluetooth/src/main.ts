@@ -8,7 +8,7 @@ import { startRecord } from "./mic";
 let mic = new Mic();
 
 let micStream = new Writable();
-let mostRecentDb = 0
+let mostRecentDb = 0;
 
 micStream.on("data", (chunk) => console.log("GOT CHUNK", chunk));
 
@@ -32,7 +32,7 @@ const connect = (
     btSerial.on("found", async (address, name) => {
       // If a device is found and the name contains 'HC' we will continue
       // This is so that it doesn't try to send data to all your other connected BT devices
-      if (name === "HC-05") {
+      if (name === "HC-05" || name === "00:21:09:01:35:D7") {
         console.log("Found BT module with name", name, "and address", address);
         btSerial.findSerialPortChannel(
           address,
@@ -65,14 +65,17 @@ const connect = (
 const callBackData = async (data: string) => {
   console.log("received", data);
   if (data.split(",").length >= 2) {
-    const [acceleration, hr] = data.split("\n")[0].split(",");
+    const [aX, aY, aZ, hr] = data.split("\n")[0].split(",");
     const time = Date.now();
 
+    console.log("AAAAA", hr)
     append({
       time,
-      acceleration,
-      hr: hr.replace("e", ""),
-      soundDB: mostRecentDb
+      aX,
+      aY,
+      aZ,
+      hr: parseInt(hr.replace("e", "")),
+      soundDB: mostRecentDb,
     });
   }
   // await end();
@@ -80,8 +83,8 @@ const callBackData = async (data: string) => {
 
 async function main() {
   startRecord((level) => {
-		const db = 20 * Math.log10(level / 100)
-    mostRecentDb = db
+    const db = 20 * Math.log10(level / 100);
+    mostRecentDb = db;
   });
   // await connectMic();
   const btConn = await connect(callBackData);
