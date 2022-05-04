@@ -68,7 +68,7 @@ const callBackData = async (data: string) => {
     const [aX, aY, aZ, hr] = data.split("\n")[0].split(",");
     const time = Date.now();
 
-    console.log("AAAAA", hr)
+    console.log("AAAAA", hr, data)
     append({
       time,
       aX,
