@@ -168,7 +168,7 @@ impl PaymadoroFN for Contract {
     }
 
     fn end_session(&mut self, success: bool) {
-        let caller = env::current_account_id();
+        let caller = env::predecessor_account_id();
         let active_user = self.active_users.iter().position(|a| &a.account == &caller);
         match (active_user, success) {
             (None, _) => panic!("{} is not an active pomodoro user", caller),
